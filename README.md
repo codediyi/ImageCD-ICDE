@@ -5,7 +5,7 @@
 This repository consists of three parts:
 - Model training and inference: a training and evaluation pipeline composed of `main.py`, `models.py`, and `doa.py`.
 - Database benchmark (DB): scripts in the `DB/` directory are used to simulate data storage and indexing operations (DuckDB + Parquet), and evaluate latency/throughput for typical query and refresh scenarios.
-- `Simulator/`: DuckDB-based end-to-end simulator that generates synthetic logs, builds RawImageView and ProficiencyImageView with indexes, runs sample queries, and exports cognitive image.
+- Simulator: DuckDB-based end-to-end simulator that generates synthetic logs, builds RawImageView and ProficiencyImageView with indexes, runs sample queries, and exports cognitive image.
 
 ## Directory Structure
 
