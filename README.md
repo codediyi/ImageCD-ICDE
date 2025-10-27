@@ -1,33 +1,35 @@
 # README
 
-## 项目简介
+## Project Introduction
 
-本仓库包含两部分：
-- 模型训练与推断：`main.py`、`models.py`、`doa.py` 组成的训练与评估流程。
-- 数据库基准（DB）：`DB/` 目录内的脚本用于模拟数据的存储与索引操作（DuckDB + Parquet），并对典型查询与刷新场景进行延迟/吞吐评测。
+This repository consists of two parts:
+- Model training and inference: a training and evaluation pipeline composed of `main.py`, `models.py`, and `doa.py`.
+- Database benchmark (DB): scripts in the `DB/` directory are used to simulate data storage and indexing operations (DuckDB + Parquet), and evaluate latency/throughput for typical query and refresh scenarios.
 
-## 目录结构
 
-- `main.py`：训练入口，读取数据、构建生成器网络、训练并产出学生掌握度图；可选上报到 W&B。
-- `models.py`：核心模块 `MultiBlock`，在生成器中用于多尺度特征提取。
-- `doa.py`：计算 DOA 指标（掌握度排序与作答正确性的相对一致性），支持多数据集配置。
-- `DB/`：数据库基准子项目（详见下文）。
-- `data.7z`、`dataset.7z`、`student_info.7z`：数据压缩包。
+## Directory Structure
 
-## 快速开始（训练部分）
+- `main.py`: Training entry point, which reads data, builds the generator network, trains, and outputs student proficiency maps; optional reporting to W&B.
+- `models.py`: Core module `MultiBlock`, used for multi-scale feature extraction in the generator.
+- `doa.py`: Calculates the DOA metric (relative consistency between proficiency ranking and answer correctness), supporting multi-dataset configurations.
+- `DB/`: Database benchmark subproject (see details below).
+- `data.7z`, `dataset.7z`, `student_info.7z`: Compressed data packages.
 
-1. 解压数据包到当前目录：
+
+## Quick Start (Training Part)
+
+1. Extract the data packages to the current directory:
     - `data.7z`
-    - `dataset.7z`  （修复：原文写成了 `dataset.z7`）
+    - `dataset.7z`  (Fix: original text incorrectly wrote `dataset.z7`)
     - `student_info.7z`
 
-2. 配置数据路径：
-    - `main.py` 中默认使用绝对路径，例如：`/data/{data_name}`、`/datasets/{data_name}`。
-    - 你可以：
-       - 将解压后的目录软链到根目录，如 `/data` 和 `/datasets`；或
-       - 直接修改 `main.py` 中相关路径为你的本地实际路径。
+2. Configure data paths:
+    - `main.py` uses absolute paths by default, e.g.: `/data/{data_name}`, `/datasets/{data_name}`.
+    - You can:
+       - Create symbolic links of the extracted directories to the root directory, such as `/data` and `/datasets`; or
+       - Directly modify the relevant paths in `main.py` to your local actual paths.
 
-3. 运行训练：
+3. Run training:
     ```bash
     nohup python main.py \
        --wandb_info "a2017" --train_val 0.3 --window_size 0 \
@@ -37,29 +39,31 @@
        > test_a2017.log 2>&1 &
     ```
 
-提示：根目录的 `environment.txt` 是基于 Linux/CUDA 的 Conda 环境定义，若仅在 macOS 上做 CPU 侧调试，可按需自行精简安装依赖。
+Note: `environment.txt` in the root directory is a Conda environment definition based on Linux/CUDA. If debugging on the CPU side of macOS only, you can install dependencies by simplifying as needed.
 
-## DB 子项目：存储与索引模拟 + 基准测试
 
-我们在 `DB/` 目录中模拟了“用户 × 知识点 × 难度”的熟练度表的存储与索引，并评测两类典型查询以及刷新吞吐：
+## DB Subproject: Storage & Index Simulation + Benchmarking
 
-- 数据模型：三维坐标 `(user_id, concept_id, difficulty_id)` → `proficiency`（浮点数）。
-- 存储格式：Parquet（Snappy 压缩），查询引擎：DuckDB。
-- 索引：载入 Parquet 后在内存表 `ProficiencyImageView` 上建立多列索引：
-   - `(user_id, concept_id, difficulty_id)`
-   - `(user_id, difficulty_id, concept_id)`
-- 查询场景：
-   - 点查：给定三元组取单值（走完整前缀索引）。
-   - 小范围区间聚合：固定 user_id，对 `concept_id` 与 `difficulty_id` 做 BETWEEN 的小窗口 AVG（利用索引前缀）。
-- 刷新场景：模拟对部分用户的小规模 UPDATE，统计用户/秒吞吐。
+In the `DB/` directory, we simulate the storage and indexing of proficiency tables with dimensions "user × concept × difficulty", and evaluate two typical query types and refresh throughput:
 
-必要依赖（与训练解耦，仅需 CPU 环境）：
+- Data model: 3D coordinates `(user_id, concept_id, difficulty_id)` → `proficiency` (floating-point number).
+- Storage format: Parquet (Snappy compression), query engine: DuckDB.
+- Indexes: After loading Parquet, multi-column indexes are built on the in-memory table `ProficiencyImageView`:
+  - `(user_id, concept_id, difficulty_id)`
+  - `(user_id, difficulty_id, concept_id)`
+- Query scenarios:
+  - Point lookup: Retrieve a single value given a triplet (using the full prefix index).
+  - Small-range interval aggregation: Fix `user_id`, perform AVG on small windows of `concept_id` and `difficulty_id` using BETWEEN (utilizing index prefixes).
+- Refresh scenario: Simulate small-scale UPDATE for some users, and count throughput in users/second.
+
+Required dependencies (decoupled from training, CPU environment only):
 ```bash
 pip install duckdb pyarrow pandas numpy
 ```
 
-快速运行：
+Quick run:
 
-- 批量脚本：
-   ```bash
-   bash DB/bash.sh
+- Batch script:
+  ```bash
+  bash DB/bash.sh
+  ```
