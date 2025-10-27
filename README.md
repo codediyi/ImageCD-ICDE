@@ -13,8 +13,57 @@ This repository consists of two parts:
 - `models.py`: Core module `MultiBlock`, used for multi-scale feature extraction in the generator.
 - `doa.py`: Calculates the DOA metric (relative consistency between proficiency ranking and answer correctness), supporting multi-dataset configurations.
 - `DB/`: Database benchmark subproject (see details below).
+- `Simulator/`: DuckDB-based end-to-end simulator that generates synthetic logs, builds RawImageView and ProficiencyImageView with indexes, runs sample queries, and exports heatmaps.
 - `data.7z`, `dataset.7z`, `student_info.7z`: Compressed data packages.
 
+## Simulator: End-to-End DuckDB Pipeline (Quick Start)
+
+To help users quickly understand ImageCD’s full data pipeline and query/indexing workflow without preparing real data, this repository offers a one-click simulator based on DuckDB in the Simulator directory.
+
+It executes the following steps in order (printing stage-wise progress and statistics to the terminal):
+
+- LogView: randomly generates user–item interaction logs (including concept, difficulty, correctness, and timestamp)
+- Data2Imag: aggregates into `RawImageView` by (user × concept × difficulty)
+- Imag2Diag (simulated): imputes sparse mastery maps, adds small noise, and enforces monotonicity along the difficulty axis to produce a dense mastery image
+- Imag2Data: materializes results into the `proficiency_image` table (i.e., ProficiencyImageView) and builds multi-column indexes
+- Query demos: point query, concept-wise distribution, difficulty-wise distribution, and saving a small submatrix of mastery values as a heatmap image
+
+Dependencies (CPU-only is fine, decoupled from training):
+
+```bash
+pip install -r Simulator/requirements.txt
+```
+
+Run the simulator:
+
+```bash
+python3 Simulator/sim_pipeline.py
+```
+
+Default behavior:
+- Generates DuckDB database: simulator.duckdb
+- Creates/fills tables: `log_view`, `raw_image_view`, `proficiency_image`
+- Builds indexes:
+  - `(user_id, concept_id, difficulty_id)`
+  - `(user_id, difficulty_id, concept_id)`
+- Produces and saves a heatmap image (example: user 0, concepts 0..4, difficulties 0..2): heatmap_u0_c0-4_d0-2.png
+
+Optional parameters (example):
+
+```bash
+python3 Simulator/sim_pipeline.py \
+  --users 100 \
+  --concepts 16 \
+  --difficulties 10 \
+  --items-per-cd 30 \
+  --sparsity 0.65 \
+  --attempts-low 1 \
+  --attempts-high 6 \
+  --noise-std 0.08 \
+  --seed 42
+```
+
+See README.md for more details. This simulator is suitable for end-to-end pipeline demonstrations and quick validation in papers or system documentation.
 
 ## Quick Start (Training Part)
 
@@ -67,3 +116,52 @@ Quick run:
   ```bash
   bash DB/bash.sh
   ```
+
+## Simulator: End-to-End DuckDB Pipeline (Quick Start)
+
+To help users quickly understand ImageCD’s full data pipeline and query/indexing workflow without preparing real data, this repository offers a one-click simulator based on DuckDB in the Simulator directory.
+
+It executes the following steps in order (printing stage-wise progress and statistics to the terminal):
+
+- LogView: randomly generates user–item interaction logs (including concept, difficulty, correctness, and timestamp)
+- Data2Imag: aggregates into `RawImageView` by (user × concept × difficulty)
+- Imag2Diag (simulated): imputes sparse mastery maps, adds small noise, and enforces monotonicity along the difficulty axis to produce a dense mastery image
+- Imag2Data: materializes results into the `proficiency_image` table (i.e., ProficiencyImageView) and builds multi-column indexes
+- Query demos: point query, concept-wise distribution, difficulty-wise distribution, and saving a small submatrix of mastery values as a heatmap image
+
+Dependencies (CPU-only is fine, decoupled from training):
+
+```bash
+pip install -r Simulator/requirements.txt
+```
+
+Run the simulator:
+
+```bash
+python3 Simulator/sim_pipeline.py
+```
+
+Default behavior:
+- Generates DuckDB database: simulator.duckdb
+- Creates/fills tables: `log_view`, `raw_image_view`, `proficiency_image`
+- Builds indexes:
+  - `(user_id, concept_id, difficulty_id)`
+  - `(user_id, difficulty_id, concept_id)`
+- Produces and saves a heatmap image (example: user 0, concepts 0..4, difficulties 0..2): heatmap_u0_c0-4_d0-2.png
+
+Optional parameters (example):
+
+```bash
+python3 Simulator/sim_pipeline.py \
+  --users 100 \
+  --concepts 16 \
+  --difficulties 10 \
+  --items-per-cd 30 \
+  --sparsity 0.65 \
+  --attempts-low 1 \
+  --attempts-high 6 \
+  --noise-std 0.08 \
+  --seed 42
+```
+
+See README.md for more details. This simulator is suitable for end-to-end pipeline demonstrations and quick validation in papers or system documentation.
